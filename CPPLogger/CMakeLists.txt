@@ -8,7 +8,7 @@ endif()
 
 target_sources(CPPLogger 
   PRIVATE
-    src/StringHelp.cpp)
+    src/StringHelp.cpp src/Logger.cpp)
 target_include_directories(CPPLogger 
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
