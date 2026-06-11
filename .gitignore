@@ -1,0 +1,42 @@
+# Build directories
+build/
+out/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.VC.db
+*.VC.opendb
+
+# MSVC build output
+Debug/
+Release/
+x64/
+x86/
+
+# Generated libraries/executables
+*.exe
+*.dll
+*.lib
+*.exp
+*.pdb
+*.ilk
+
+# Ninja
+.ninja_deps
+.ninja_log
+build.ninja
+
+# CLion
+.idea/
+
+# VS Code (optional)
+.vscode/
