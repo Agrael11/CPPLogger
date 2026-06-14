@@ -1,97 +1,247 @@
-#pragma once
+#ifndef EMSCRIPTEN
+#include <fstream>
+#else
+#include <emscripten.h>
+#endif
 
-#include <string>
 #include <format>
+
+#include  <Logger.hpp>
+#include "StringHelp.hpp"
 #include <stack>
 
 namespace TachiTools::Logger
 {
-    class Logger
+    Logger::Level Logger::m_minimumPrintLevel = Logger::Level::Info;
+    Logger::Level Logger::m_minimumFileLevel = Logger::Level::Warning;
+    bool Logger::m_printToFile = false;
+    bool Logger::m_overrideFile = true;
+    bool Logger::m_saveTimedCopy = true;
+    bool Logger::m_openedFile = false;
+    bool Logger::m_linebreak = true;
+    std::string Logger::m_fileName = "";
+    std::string Logger::m_timedCopyName = "";
+    std::string Logger::m_moduleName = "";
+    std::string Logger::m_submoduleName = "";
+    std::stack<std::string> Logger::m_headerStack = std::stack<std::string>();
+    std::stack<std::string> Logger::m_moduleStack = std::stack<std::string>();
+
+    void Logger::nextNoLinebreak()
     {
-    public:
-        enum class Level { Debug, Info, Warning, Error, Fatal };
-        enum class ConsoleColor { Black, Red, Green, Yellow, Blue, Magenta, Cyan, White, Reset = -1 };
+        m_linebreak = false;
+    }
+
+    void Logger::enterModule(const std::string_view moduleName)
+    {
+        m_moduleStack.push(std::string(m_moduleName));
+        m_moduleName = moduleName;
+    }
+    void Logger::exitModule()
+    {
+        if (!m_moduleStack.empty())
+        {
+            m_moduleName = m_moduleStack.top();
+            m_moduleStack.pop();
+        }
+        else
+        {
+            m_moduleName = "";
+        }
+    }
+    void Logger::enterSubmodule(const std::string_view subModuleName)
+    {
+        m_headerStack.push(std::string(m_submoduleName));
+        m_submoduleName = subModuleName;
+    }
+    void Logger::exitSubmodule()
+    {
+        if (!m_headerStack.empty())
+        {
+            m_submoduleName = m_headerStack.top();
+            m_headerStack.pop();
+        }
+        else
+        {
+            m_submoduleName = "";
+        }
+    }
+
+    void Logger::setup(Level minimumPrintLevel, Level minimumFileLevel, bool printToFile, std::string fileName, bool saveTimedCopy, bool overrideFile, std::string moduleName)
+    {
+        m_minimumPrintLevel = minimumPrintLevel;
+        m_minimumFileLevel = minimumFileLevel;
+        m_printToFile = printToFile;
+        m_fileName = fileName;
+        m_saveTimedCopy = saveTimedCopy;
+        m_overrideFile = overrideFile;
+        m_moduleName = moduleName;
+    }
+
+    std::string Logger::returnCurrentTimeDate(const std::string_view format)
+    {
+        time_t now = time(0);
+        struct tm tstruct;
+        char buf[80];
+#if WIN32
+        localtime_s(&tstruct, &now);
+#else
+        localtime_r(&now, &tstruct);
+#endif
+        strftime(buf, sizeof(buf), format.data(), &tstruct);
+        return buf;
+    }
+
+    std::string Logger::makeColor(Logger::ConsoleColor color, bool background, bool bright)
+    {
+#if EMSCRIPTEN
+
+        return "";
+
+#else
+
+        int col = static_cast<int>(color);
+
+        if (background) col += 40;
+        else col += 30;
+        if (bright) col += 60;
+
+        if (col == -1) col = 0;
+
+        return std::format("\x1b[{}m", col);
+
+#endif
+    }
+
+
+    void Logger::logSimple(const Logger::Level level, const std::string_view message, const std::string_view header)
+    {
+        std::string realTime = returnCurrentTimeDate("%Y-%m-%d %X");
         
+        if (level >= m_minimumPrintLevel) logConsole(level, message, realTime, header);
 
-        static void setup(const Level minimumPrintLevel = Level::Info, const Level minimumFileLevel = Level::Warning, const bool printToFile = false, const std::string fileName = "", const bool saveTimedCopy = true, const bool overrideFile = true, const std::string moduleName = "");
+#ifndef EMSCRIPTEN
+        if (m_printToFile && !m_fileName.empty()  && level >= m_minimumFileLevel) logFile(level, message, realTime, header);
+#endif
+    }
 
-        template<typename ... Args>
-        static void log(const Logger::Level level, const std::string_view message, Args&& ... args)
+    void Logger::logConsole(const Logger::Level level, const std::string_view message, const std::string_view realTime, const std::string_view header)
+    {
+        std::string gray = makeColor(ConsoleColor::White, false, false);
+        std::string blue = makeColor(ConsoleColor::Blue, false, true);
+
+        std::string levelColor;
+        std::string levelString;
+        std::string sourceColor = makeColor(ConsoleColor::Cyan, false, true);
+        switch (level)
         {
-            std::string header;
-            if (!m_moduleName.empty() && !m_submoduleName.empty())
-            {
-                header = std::format("{}/{}", m_moduleName, m_submoduleName);
-            }
-            else if (!m_moduleName.empty())
-            {
-                header = std::format("{}", m_moduleName);
-            }
-            else
-            {
-                header = "";
-            }
-            if (sizeof...(args) == 0)
-            {
-                Logger::logSimple(level, message, header);
-            }
-            else
-            {
-                std::string formattedMessage = std::vformat(message, std::make_format_args(args...));
-                Logger::logSimple(level, formattedMessage, header);
-            }
+        case Level::Debug:
+            levelColor = makeColor(ConsoleColor::White, false, true);
+            levelString = "Debug";
+            break;
+        case Level::Info:
+            levelColor = makeColor(ConsoleColor::Blue, false, true);
+            levelString = "Info";
+            break;
+        case Level::Warning:
+            levelColor = makeColor(ConsoleColor::Yellow, false, true);
+            levelString = "Warning";
+            break;
+        case Level::Error:
+            levelColor = makeColor(ConsoleColor::Red, false, true);
+            levelString = "Error";
+            break;
+        default:
+        case Level::Fatal:
+            levelColor = makeColor(ConsoleColor::Red, false, false);
+            levelString = "Fatal Error";
+            break;
         }
 
-        template<typename ... Args>
-        static void log(const std::string_view customHeader, const std::string_view customSubHeader, const Logger::Level level, const std::string_view message, Args&& ... args)
+        if (header.length() > 0)
         {
-            std::string header;
-            if (!customHeader.empty() && !customSubHeader.empty())
-            {
-                header = std::format("{}/{}", customHeader, customSubHeader);
-            }
-            else if (!customHeader.empty())
-            {
-                header = std::format("{}", customHeader);
-            }
-            else
-            {
-                header = "";
-            }
-            if (sizeof...(args) == 0)
-            {
-                Logger::logSimple(level, message, header);
-            }
-            else
-            {
-                std::string formattedMessage = std::vformat(message, std::make_format_args(args...));
-                Logger::logSimple(level, formattedMessage, header);
-            }
+            printf("[%s%s%s @ %s%s%s] [%s%s%s] %s%s", 
+                levelColor.c_str(), levelString.c_str(), gray.c_str(), 
+                blue.c_str(), realTime.data(), gray.c_str(), 
+                sourceColor.c_str(), header.data(), gray.c_str(), 
+                message.data(), m_linebreak?("\n"):"");
+        }
+        else
+        {
+            printf("[%s%s%s @ %s%s%s] %s%s",
+                levelColor.c_str(), levelString.c_str(), gray.c_str(), 
+                blue.c_str(), realTime.data(), gray.c_str(), 
+                message.data(), m_linebreak?("\n"):"");
+        }
+        m_linebreak = true;
+    }
+
+#ifndef EMSCRIPTEN
+    void Logger::logFile(const Logger::Level level, const std::string_view message, const std::string_view realTime, const std::string_view header)
+    {
+        std::string levelString;
+        switch (level)
+        {
+        case Level::Debug:
+            levelString = "Debug";
+            break;
+        case Level::Info:
+            levelString = "Info";
+            break;
+        case Level::Warning:
+            levelString = "Warning";
+            break;
+        case Level::Error:
+            levelString = "Error";
+            break;
+        default:
+        case Level::Fatal:
+            levelString = "Fatal Error";
+            break;
+        }
+        
+        std::string printText;
+        if (header.length() > 0)
+        {
+            printText = std::format("[{} @ {}] [{}] {}\n", 
+                levelString,
+                realTime,
+                header,
+                message); 
+        }
+        else
+        {
+            printText = std::format("[{} @ {}] {}\n", 
+                levelString,
+                realTime,
+                message); 
         }
 
-        static void enterModule(const std::string_view moduleName);
-        static void exitModule();
-        static void enterSubmodule(const std::string_view subModuleName);
-        static void exitSubmodule();
+        std::ofstream myOutFile(m_fileName, (m_overrideFile && !m_openedFile) ? std::ios_base::trunc : std::ios_base::app);
+        if (!myOutFile)
+        {
+            Logger::logConsole(Logger::Level::Error, std::format("Failed to open Log file: {}", m_fileName), realTime, "Logger");
+            return;
+        }
 
-    private:
-        static void logSimple(const Level level, const std::string_view message, const std::string_view header);
-        static std::string returnCurrentTimeDate(const std::string_view format);
-        static std::string makeColor(const ConsoleColor color, const bool background, const bool bright);
-        static void logConsole(const Level level, const std::string_view message, const std::string_view realTime, const std::string_view header);
-        static void logFile(const Level level, const std::string_view message, const std::string_view realTime, const std::string_view header);
+        myOutFile << printText;
+        myOutFile.close();
 
-        static std::string m_fileName;
-        static std::string m_moduleName;
-        static std::string m_submoduleName;
-        static std::stack<std::string> m_moduleStack;
-        static std::stack<std::string> m_headerStack;
-        static bool m_printToFile;
-        static bool m_overrideFile;
-        static bool m_openedFile;
-        static bool m_saveTimedCopy;
-        static std::string m_timedCopyName;
-        static Level m_minimumPrintLevel;
-        static Level m_minimumFileLevel;
-    };
-};
+        if (m_saveTimedCopy)
+        {
+            if (m_timedCopyName == "")
+            {
+                m_timedCopyName = std::format("{}_{}_{}", returnCurrentTimeDate("%Y-%m-%d"), returnCurrentTimeDate("%H-%M-%S"), m_fileName);
+            }
+            std::ofstream mySecondOutFile(m_timedCopyName, std::ios_base::app);
+            if (!mySecondOutFile)
+            {
+                Logger::logConsole(Logger::Level::Error, std::format("Failed to open Log file: {}", m_timedCopyName), realTime, "Logger");
+                return;
+            }
+            mySecondOutFile << printText;
+            mySecondOutFile.close();
+        }
+        m_openedFile = true;
+    }
+#endif
+}
