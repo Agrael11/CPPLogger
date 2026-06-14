@@ -22,12 +22,12 @@ namespace TachiTools::Logger
     std::string Logger::m_timedCopyName = "";
     std::string Logger::m_moduleName = "";
     std::string Logger::m_submoduleName = "";
-    std::stack<std::string_view> Logger::m_headerStack = std::stack<std::string_view>();
-    std::stack<std::string_view> Logger::m_moduleStack = std::stack<std::string_view>();
+    std::stack<std::string> Logger::m_headerStack = std::stack<std::string>();
+    std::stack<std::string> Logger::m_moduleStack = std::stack<std::string>();
 
     void Logger::enterModule(const std::string_view moduleName)
     {
-        m_moduleStack.push(m_moduleName);
+        m_moduleStack.push(std::string(m_moduleName));
         m_moduleName = moduleName;
     }
     void Logger::exitModule()
@@ -44,7 +44,7 @@ namespace TachiTools::Logger
     }
     void Logger::enterSubmodule(const std::string_view subModuleName)
     {
-        m_headerStack.push(m_submoduleName);
+        m_headerStack.push(std::string(m_submoduleName));
         m_submoduleName = subModuleName;
     }
     void Logger::exitSubmodule()

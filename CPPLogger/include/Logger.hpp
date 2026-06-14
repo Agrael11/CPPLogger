@@ -84,8 +84,8 @@ namespace TachiTools::Logger
         static std::string m_fileName;
         static std::string m_moduleName;
         static std::string m_submoduleName;
-        static std::stack<std::string_view> m_moduleStack;
-        static std::stack<std::string_view> m_headerStack;
+        static std::stack<std::string> m_moduleStack;
+        static std::stack<std::string> m_headerStack;
         static bool m_printToFile;
         static bool m_overrideFile;
         static bool m_openedFile;
