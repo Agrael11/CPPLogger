@@ -18,12 +18,18 @@ namespace TachiTools::Logger
     bool Logger::m_overrideFile = true;
     bool Logger::m_saveTimedCopy = true;
     bool Logger::m_openedFile = false;
+    bool Logger::m_linebreak = true;
     std::string Logger::m_fileName = "";
     std::string Logger::m_timedCopyName = "";
     std::string Logger::m_moduleName = "";
     std::string Logger::m_submoduleName = "";
     std::stack<std::string> Logger::m_headerStack = std::stack<std::string>();
     std::stack<std::string> Logger::m_moduleStack = std::stack<std::string>();
+
+    void Logger::nextNoLinebreak()
+    {
+        m_linebreak = false;
+    }
 
     void Logger::enterModule(const std::string_view moduleName)
     {
@@ -153,19 +159,20 @@ namespace TachiTools::Logger
 
         if (header.length() > 0)
         {
-            printf("[%s%s%s @ %s%s%s] [%s%s%s] %s\n", 
+            printf("[%s%s%s @ %s%s%s] [%s%s%s] %s%s", 
                 levelColor.c_str(), levelString.c_str(), gray.c_str(), 
                 blue.c_str(), realTime.data(), gray.c_str(), 
                 sourceColor.c_str(), header.data(), gray.c_str(), 
-                message.data());
+                message.data(), m_linebreak?("\n"):"");
         }
         else
         {
-            printf("[%s%s%s @ %s%s%s] %s\n",
+            printf("[%s%s%s @ %s%s%s] %s%s",
                 levelColor.c_str(), levelString.c_str(), gray.c_str(), 
                 blue.c_str(), realTime.data(), gray.c_str(), 
-                message.data());
+                message.data(), m_linebreak?("\n"):"");
         }
+        m_linebreak = true;
     }
 
 #ifndef EMSCRIPTEN
