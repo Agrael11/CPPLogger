@@ -29,7 +29,7 @@ namespace TachiTools::Logger
         }
 
         template<typename ... Args>
-        static void log(const Logger::Level level, const std::string_view subHeader, const std::string_view message, Args&& ... args)
+        static void log(const std::string_view subHeader, const Logger::Level level, const std::string_view message, Args&& ... args)
         {
             std::string header = std::format("{}/{}", m_moduleName, subHeader);
             if (sizeof...(args) == 0)
@@ -44,7 +44,7 @@ namespace TachiTools::Logger
         }
 
         template<typename ... Args>
-        static void log(const Logger::Level level, const std::string_view customHeader, const std::string_view subHeader, const std::string_view message, Args&& ... args)
+        static void log(const std::string_view customHeader, const std::string_view subHeader, const Logger::Level level, const std::string_view message, Args&& ... args)
         {
             std::string header = std::format("{}/{}", customHeader, subHeader);
             if (sizeof...(args) == 0)
