@@ -20,7 +20,7 @@ namespace TachiTools::Logger
     std::string Logger::m_fileName = "";
     std::string Logger::m_timedCopyName = "";
 
-    void Logger::setup(Level minimumPrintLevel, Level minimumFileLevel, bool printToFile, std::string fileName, bool saveTimedCopy, bool overrideFile)
+    void Logger::setup(Level minimumPrintLevel, Level minimumFileLevel, bool printToFile, std::string fileName, bool saveTimedCopy, bool overrideFile, std::string moduleName)
     {
         m_minimumPrintLevel = minimumPrintLevel;
         m_minimumFileLevel = minimumFileLevel;
@@ -28,6 +28,7 @@ namespace TachiTools::Logger
         m_fileName = fileName;
         m_saveTimedCopy = saveTimedCopy;
         m_overrideFile = overrideFile;
+        m_moduleName = moduleName;
     }
 
     std::string Logger::returnCurrentTimeDate(const std::string_view format)
@@ -66,24 +67,25 @@ namespace TachiTools::Logger
     }
 
 
-    void Logger::logSimple(const Logger::Level level, const std::string_view message)
+    void Logger::logSimple(const Logger::Level level, const std::string_view message, const std::string_view header)
     {
         std::string realTime = returnCurrentTimeDate("%Y-%m-%d %X");
         
-        if (level >= m_minimumPrintLevel) logConsole(level, message, realTime);
+        if (level >= m_minimumPrintLevel) logConsole(level, message, realTime, header);
 
 #ifndef EMSCRIPTEN
-        if (m_printToFile && !m_fileName.empty()  && level >= m_minimumFileLevel) logFile(level, message, realTime);
+        if (m_printToFile && !m_fileName.empty()  && level >= m_minimumFileLevel) logFile(level, message, realTime, header);
 #endif
     }
 
-    void Logger::logConsole(const Logger::Level level, const std::string_view message, const std::string_view realTime)
+    void Logger::logConsole(const Logger::Level level, const std::string_view message, const std::string_view realTime, const std::string_view header)
     {
         std::string gray = makeColor(ConsoleColor::White, false, false);
         std::string blue = makeColor(ConsoleColor::Blue, false, true);
 
         std::string levelColor;
         std::string levelString;
+        std::string sourceColor = makeColor(ConsoleColor::Cyan, false, true);
         switch (level)
         {
         case Level::Debug:
@@ -109,11 +111,25 @@ namespace TachiTools::Logger
             break;
         }
 
-        printf("[%s%s%s @ %s%s%s] %s\n", levelColor.c_str(), levelString.c_str(), gray.c_str(), blue.c_str(), realTime.data(), gray.c_str(), message.data());
+        if (header.length() > 0)
+        {
+            printf("[%s%s%s @ %s%s%s] [%s%s%s] %s\n", 
+                levelColor.c_str(), levelString.c_str(), gray.c_str(), 
+                blue.c_str(), realTime.data(), gray.c_str(), 
+                sourceColor.c_str(), header.data(), gray.c_str(), 
+                message.data());
+        }
+        else
+        {
+            printf("[%s%s%s @ %s%s%s] %s\n",
+                levelColor.c_str(), levelString.c_str(), gray.c_str(), 
+                blue.c_str(), realTime.data(), gray.c_str(), 
+                message.data());
+        }
     }
 
 #ifndef EMSCRIPTEN
-    void Logger::logFile(const Logger::Level level, const std::string_view message, const std::string_view realTime)
+    void Logger::logFile(const Logger::Level level, const std::string_view message, const std::string_view realTime, const std::string_view header)
     {
         std::string levelString;
         switch (level)
@@ -136,12 +152,27 @@ namespace TachiTools::Logger
             break;
         }
         
-        std::string printText = std::format("[{} @ {}] {}\n", levelString, realTime, message);
+        std::string printText;
+        if (header.length() > 0)
+        {
+            printText = std::format("[{} @ {}] [{}] {}\n", 
+                levelString,
+                realTime,
+                header,
+                message); 
+        }
+        else
+        {
+            printText = std::format("[{} @ {}] {}\n", 
+                levelString,
+                realTime,
+                message); 
+        }
 
         std::ofstream myOutFile(m_fileName, (m_overrideFile && !m_openedFile) ? std::ios_base::trunc : std::ios_base::app);
         if (!myOutFile)
         {
-            Logger::logConsole(Logger::Level::Error, std::format("Failed to open Log file: {}", m_fileName), realTime);
+            Logger::logConsole(Logger::Level::Error, std::format("Failed to open Log file: {}", m_fileName), realTime, "Logger");
             return;
         }
 
@@ -157,7 +188,7 @@ namespace TachiTools::Logger
             std::ofstream mySecondOutFile(m_timedCopyName, std::ios_base::app);
             if (!mySecondOutFile)
             {
-                Logger::logConsole(Logger::Level::Error, std::format("Failed to open Log file: {}", m_timedCopyName), realTime);
+                Logger::logConsole(Logger::Level::Error, std::format("Failed to open Log file: {}", m_timedCopyName), realTime, "Logger");
                 return;
             }
             mySecondOutFile << printText;
