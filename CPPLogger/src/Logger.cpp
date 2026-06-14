@@ -19,6 +19,8 @@ namespace TachiTools::Logger
     bool Logger::m_openedFile = false;
     std::string Logger::m_fileName = "";
     std::string Logger::m_timedCopyName = "";
+    std::string Logger::m_moduleName = "";
+
 
     void Logger::setup(Level minimumPrintLevel, Level minimumFileLevel, bool printToFile, std::string fileName, bool saveTimedCopy, bool overrideFile, std::string moduleName)
     {
