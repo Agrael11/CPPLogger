@@ -2,6 +2,7 @@
 
 #include <string>
 #include <format>
+#include <stack>
 
 namespace TachiTools::Logger
 {
@@ -17,21 +18,46 @@ namespace TachiTools::Logger
         template<typename ... Args>
         static void log(const Logger::Level level, const std::string_view message, Args&& ... args)
         {
+            std::string header;
+            if (!m_moduleName.empty() && !m_submoduleName.empty())
+            {
+                header = std::format("{}/{}", m_moduleName, m_submoduleName);
+            }
+            else if (!m_moduleName.empty())
+            {
+                header = std::format("{}", m_moduleName);
+            }
+            else
+            {
+                header = "";
+            }
             if (sizeof...(args) == 0)
             {
-                Logger::logSimple(level, message, m_moduleName);
+                Logger::logSimple(level, message, header);
             }
             else
             {
                 std::string formattedMessage = std::vformat(message, std::make_format_args(args...));
-                Logger::logSimple(level, formattedMessage, m_moduleName);
+                Logger::logSimple(level, formattedMessage, header);
             }
         }
 
         template<typename ... Args>
-        static void log(const std::string_view subHeader, const Logger::Level level, const std::string_view message, Args&& ... args)
+        static void log(const std::string_view customHeader, const std::string_view customSubHeader, const Logger::Level level, const std::string_view message, Args&& ... args)
         {
-            std::string header = std::format("{}/{}", m_moduleName, subHeader);
+            std::string header;
+            if (!customHeader.empty() && !customSubHeader.empty())
+            {
+                header = std::format("{}/{}", customHeader, customSubHeader);
+            }
+            else if (!customHeader.empty())
+            {
+                header = std::format("{}", customHeader);
+            }
+            else
+            {
+                header = "";
+            }
             if (sizeof...(args) == 0)
             {
                 Logger::logSimple(level, message, header);
@@ -43,20 +69,10 @@ namespace TachiTools::Logger
             }
         }
 
-        template<typename ... Args>
-        static void log(const std::string_view customHeader, const std::string_view subHeader, const Logger::Level level, const std::string_view message, Args&& ... args)
-        {
-            std::string header = std::format("{}/{}", customHeader, subHeader);
-            if (sizeof...(args) == 0)
-            {
-                Logger::logSimple(level, message, header);
-            }
-            else
-            {
-                std::string formattedMessage = std::vformat(message, std::make_format_args(args...));
-                Logger::logSimple(level, formattedMessage, header);
-            }
-        }
+        static void enterModule(const std::string_view moduleName);
+        static void exitModule();
+        static void enterSubmodule(const std::string_view subModuleName);
+        static void exitSubmodule();
 
     private:
         static void logSimple(const Level level, const std::string_view message, const std::string_view header);
@@ -67,6 +83,9 @@ namespace TachiTools::Logger
 
         static std::string m_fileName;
         static std::string m_moduleName;
+        static std::string m_submoduleName;
+        static std::stack<std::string_view> m_moduleStack;
+        static std::stack<std::string_view> m_headerStack;
         static bool m_printToFile;
         static bool m_overrideFile;
         static bool m_openedFile;

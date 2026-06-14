@@ -8,6 +8,7 @@
 
 #include  <Logger.hpp>
 #include "StringHelp.hpp"
+#include <stack>
 
 namespace TachiTools::Logger
 {
@@ -20,7 +21,44 @@ namespace TachiTools::Logger
     std::string Logger::m_fileName = "";
     std::string Logger::m_timedCopyName = "";
     std::string Logger::m_moduleName = "";
+    std::string Logger::m_submoduleName = "";
+    std::stack<std::string_view> Logger::m_headerStack = std::stack<std::string_view>();
+    std::stack<std::string_view> Logger::m_moduleStack = std::stack<std::string_view>();
 
+    void Logger::enterModule(const std::string_view moduleName)
+    {
+        m_moduleStack.push(m_moduleName);
+        m_moduleName = moduleName;
+    }
+    void Logger::exitModule()
+    {
+        if (!m_moduleStack.empty())
+        {
+            m_moduleName = m_moduleStack.top();
+            m_moduleStack.pop();
+        }
+        else
+        {
+            m_moduleName = "";
+        }
+    }
+    void Logger::enterSubmodule(const std::string_view subModuleName)
+    {
+        m_headerStack.push(m_submoduleName);
+        m_submoduleName = subModuleName;
+    }
+    void Logger::exitSubmodule()
+    {
+        if (!m_headerStack.empty())
+        {
+            m_submoduleName = m_headerStack.top();
+            m_headerStack.pop();
+        }
+        else
+        {
+            m_submoduleName = "";
+        }
+    }
 
     void Logger::setup(Level minimumPrintLevel, Level minimumFileLevel, bool printToFile, std::string fileName, bool saveTimedCopy, bool overrideFile, std::string moduleName)
     {
