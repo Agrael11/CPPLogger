@@ -19,19 +19,19 @@ namespace TachiTools::Logger
         {
             if (sizeof...(args) == 0)
             {
-                Logger::logSimple(level, message, this.m_moduleName);
+                Logger::logSimple(level, message, m_moduleName);
             }
             else
             {
                 std::string formattedMessage = std::vformat(message, std::make_format_args(args...));
-                Logger::logSimple(level, formattedMessage, this.m_moduleName);
+                Logger::logSimple(level, formattedMessage, m_moduleName);
             }
         }
 
         template<typename ... Args>
         static void log(const Logger::Level level, const std::string_view subHeader, const std::string_view message, Args&& ... args)
         {
-            std::string header = std::format("{}/{}", this.m_moduleName, subHeader);
+            std::string header = std::format("{}/{}", m_moduleName, subHeader);
             if (sizeof...(args) == 0)
             {
                 Logger::logSimple(level, message, header);
